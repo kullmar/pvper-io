@@ -1,0 +1,15 @@
+:root {
+    --color-primary: theme('colors.gray.700');
+    --color-secondary: theme('colors.gray.600');
+
+    --color-text-primary: theme('colors.white');
+    --color-text-secondary: theme('colors.gray.50');
+}
+
+html, body {
+    background-color: var(--color-primary);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
