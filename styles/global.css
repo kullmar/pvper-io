@@ -1,15 +1,27 @@
 :root {
-    --color-primary: theme('colors.gray.700');
-    --color-secondary: theme('colors.gray.600');
-
+    --color-primary: theme('colors.purple.900');
+    --color-primary-variant: theme('colors.purple.700');
+    --color-secondary: theme('colors.indigo.900');
+    --color-body: theme('colors.black');
+    --color-background: theme('colors.gray.900');
     --color-text-primary: theme('colors.white');
-    --color-text-secondary: theme('colors.gray.50');
-}
-
-html, body {
-    background-color: var(--color-primary);
 }
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        background-color: var(--color-body);
+        color: var(--color-text-primary);
+    }
+
+    button {
+        @apply px-3 py-1 rounded bg-primary hover:bg-primary-variant;
+    }
+
+    input {
+        @apply bg-transparent rounded text-white border-primary border-2;
+    }
+}

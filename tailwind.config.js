@@ -3,14 +3,14 @@ module.exports = {
   darkMode: false, // or 'media' or 'class'
   theme: {
     extend: {
+      backgroundColor: {
+        surface: 'var(--color-background)'
+      },
       colors: {
         primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
+        'primary-variant': 'var(--color-primary-variant)',
+        secondary: 'var(--color-secondary)'
       },
-      textColor: {
-        primary: 'var(--color-text-primary)',
-        secondary: 'var(--color-text-secondary)'
-      }
     },
   },
   variants: {
