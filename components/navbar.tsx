@@ -1,11 +1,9 @@
+import Link from 'next/link';
+
 export default function Navbar() {
     return (
-        <nav className="flex justify-between items-center h-12 bg-surface px-4">
-            <a>Logo</a>
-
-            <ul>
-                <li>Home</li>
-            </ul>
+        <nav className="flex justify-between items-center h-12 bg-surface px-8">
+            <Link href="/">Logo</Link>
 
             <div>X connected users</div>
         </nav>
