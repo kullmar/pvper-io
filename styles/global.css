@@ -1,9 +1,10 @@
 :root {
-    --color-primary: theme('colors.purple.900');
-    --color-primary-variant: theme('colors.purple.700');
-    --color-secondary: theme('colors.indigo.900');
-    --color-body: theme('colors.black');
-    --color-background: theme('colors.gray.900');
+    --color-primary: #3f51b5;
+    --color-primary-light: #7986cb;
+    --color-primary-dark: #303f9f;
+    --color-secondary: #f50057;
+    --color-body: #121212;
+    --color-background: #333;
     --color-text-primary: theme('colors.white');
 }
 
@@ -18,10 +19,10 @@
     }
 
     button {
-        @apply px-3 py-1 rounded bg-primary hover:bg-primary-variant;
+        @apply px-3 py-1 rounded bg-primary hover:bg-primary-light font-bold;
     }
 
     input {
-        @apply bg-transparent rounded text-white border-primary border-2;
+        @apply bg-transparent rounded text-white border-2;
     }
 }

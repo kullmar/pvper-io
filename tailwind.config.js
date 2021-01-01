@@ -8,7 +8,8 @@ module.exports = {
       },
       colors: {
         primary: 'var(--color-primary)',
-        'primary-variant': 'var(--color-primary-variant)',
+        'primary-light': 'var(--color-primary-light)',
+        'primary-dark': 'var(--color-primary-dark)',
         secondary: 'var(--color-secondary)'
       },
     },

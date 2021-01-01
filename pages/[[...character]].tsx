@@ -1,13 +1,11 @@
 import Head from 'next/head';
-import { useRouter } from 'next/router'
-import React, { useState } from 'react';
 import { GetServerSideProps } from 'next';
-import { fetchCharacter, CharacterQuery } from '../../../lib/wow-api';
-import CurrentRating from '../../../components/current-rating';
-import Navbar from '../../../components/navbar';
-import CharacterSearch from '../../../components/character-search';
+import CharacterSearch from '../components/character-search';
+import Navbar from '../components/navbar';
+import { fetchAllRealms, fetchCharacter } from '../lib/wow-api';
+import Character from '../components/character';
 
-export default function Character({ arena, media }) {
+export default function Home({ character, realms }) {
     return (
         <>
             <Head>
@@ -19,30 +17,10 @@ export default function Character({ arena, media }) {
 
             <div className="container mx-auto mt-40 flex flex-wrap space-x-2">
                 <div className="flex flex-col flex-1 flex-shrink-0 space-y-2">
-                    <CharacterSearch />
+                    <CharacterSearch realms={realms} />
 
-                    <div className="character-background bg-surface flex flex-col p-8 space-y-8">
-                        <div>
-                            <img
-                                className="avatar"
-                                src={media.avatarImageUrl}
-                            />
-                        </div>
-
-                        <div className="flex justify-around">
-                            <CurrentRating
-                                bracket="2v2"
-                                cr={arena.twos.cr}
-                                wins={arena.twos.wins}
-                                losses={arena.twos.losses}
-                            />
-                            <CurrentRating
-                                bracket="3v3"
-                                cr={arena.threes.cr}
-                                wins={arena.threes.wins}
-                                losses={arena.threes.losses}
-                            />
-                        </div>
+                    <div className="character-background bg-surface">
+                        <Character character={character} />
                     </div>
                 </div>
 
@@ -54,15 +32,12 @@ export default function Character({ arena, media }) {
             <style jsx>
                 {`
                     .character-background {
-                        background-image: url(${media.characterImageUrl});
+                        background-image: url(${character
+                            ? character.media.characterImageUrl
+                            : ''});
                         background-size: cover;
                         background-position: center;
                         min-height: 800px;
-                    }
-
-                    .avatar {
-                        height: 90px;
-                        width: 90px;
                     }
                 `}
             </style>
@@ -72,27 +47,33 @@ export default function Character({ arena, media }) {
 
 export const getServerSideProps: GetServerSideProps = async ({ query }) => {
     let props = {
-        props: {},
+        props: {
+            realms: await fetchAllRealms(),
+        },
     };
 
-    const { region, realm, characterName } = query;
-    console.info(
-        `Fetching character info for ${characterName}-${realm}-${region}`
-    );
-    const data = await fetchCharacter(
-        query as unknown as CharacterQuery
-    );
+    if (
+        query.character &&
+        Array.isArray(query.character) &&
+        query.character.length === 3
+    ) {
+        const [region, realm, characterName] = query.character;
+        if (Boolean(region) && Boolean(realm) && Boolean(characterName)) {
+            console.info(
+                `Fetching character info for ${characterName}-${realm}-${region}`
+            );
+            const data = await fetchCharacter({ region, realm, characterName });
 
-    if (data) {
-        const arenaStatistics = reduceArenaStatistics(data);
-        const media = reduceMedia(data.media);
+            if (data) {
+                const arenaStatistics = reduceArenaStatistics(data);
+                const media = reduceMedia(data.media);
 
-        props = {
-            props: {
-                arena: arenaStatistics,
-                media,
-            },
-        };
+                props.props['character'] = {
+                    arena: arenaStatistics,
+                    media,
+                };
+            }
+        }
     }
 
     return props;
