@@ -22,7 +22,7 @@ export default function Home({ character, realms, recent }) {
 
             <Navbar></Navbar>
 
-            <div className="container mx-auto mt-40 flex flex-wrap md:space-x-2s">
+            <div className="container mx-auto mt-40 flex flex-wrap space-y-2 md:space-x-2 md:space-y-0">
                 <div className="flex flex-col flex-1 flex-shrink-0 space-y-2 min-w-full md:min-w-0">
                     <CharacterSearch realms={realms} />
 

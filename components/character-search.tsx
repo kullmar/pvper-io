@@ -1,13 +1,14 @@
+import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useOnClickOutside } from '../effects/click-outside';
 
 export default function CharacterSearch({ realms }) {
-    const initialAutocompleteItems = realms.slice(0, 10);
+    const initialAutocompleteRealms = realms.slice(0, 10);
     const [inputVal, setInputVal] = useState('');
     const [characterName, setCharacterName] = useState('');
     const [realm, setRealm] = useState('');
-    const [autocompleteItems, setAutocompleteItems] = useState(initialAutocompleteItems);
+    const [autocompleteItems, setAutocompleteItems] = useState(initialAutocompleteRealms);
     const [isAutocompleteVisible, setAutocompleteVisible] = useState(false);
 
     const router = useRouter();
@@ -26,7 +27,7 @@ export default function CharacterSearch({ realms }) {
             setAutocompleteItems(realms.filter(r => r.name.toLowerCase().startsWith(realmInput.toLowerCase())).slice(0, 10));
         } else {
             setCharacterName(v);
-            setAutocompleteItems(initialAutocompleteItems);
+            setAutocompleteItems(initialAutocompleteRealms);
         }
 
         setAutocompleteVisible(v.length >= 2);
@@ -66,15 +67,15 @@ export default function CharacterSearch({ realms }) {
                                 <li
                                     key={index}
                                     className="cursor-pointer hover:bg-gray-700"
-                                    onClick={() =>
-                                        handleAutocompleteClick({
-                                            characterName,
-                                            realm: r.name,
-                                            region: r.region,
-                                        })
-                                    }
+                                    // onClick={() =>
+                                    //     handleAutocompleteClick({
+                                    //         characterName,
+                                    //         realm: r.name,
+                                    //         region: r.region,
+                                    //     })
+                                    // }
                                 >
-                                    {characterName}-{r.name} ({r.region.toUpperCase()})
+                                    <Link href={`/${r.region}/${r.name}/${characterName}`}><a>{characterName}-{r.name} ({r.region.toUpperCase()})</a></Link>
                                 </li>
                             ))}
                         </ul>
