@@ -40,26 +40,33 @@ export async function fetchAllRealms(): Promise<Realm[]> {
     cachedRealms = await Promise.all([
         dynamicFetch(path, 'eu'),
         dynamicFetch(path, 'us'),
-    ]).then(([euData, usData]) => [
-        ...euData.realms.map((r) => mapper(r, 'eu')),
-        ...usData.realms.map((r) => mapper(r, 'us')),
-    ].sort((a, b) => a.name.localeCompare(b.name)));
+    ]).then(([euData, usData]) =>
+        [
+            ...euData.realms.map((r) => mapper(r, 'eu')),
+            ...usData.realms.map((r) => mapper(r, 'us')),
+        ].sort((a, b) => a.name.localeCompare(b.name))
+    );
 
     return cachedRealms;
 }
 
 export async function fetchCharacter(query: CharacterQuery) {
+    const cleanedQuery = {
+        characterName: query.characterName,
+        realm: query.realm.toLowerCase(),
+        region: query.region.toLowerCase(),
+    };
     return Promise.all([
-        fetchCharacterMedia(query),
-        fetchCharacter2v2(query),
-        fetchCharacter3v3(query),
-        fetchCharacterStatistics(query),
+        fetchCharacterMedia(cleanedQuery),
+        fetchCharacter2v2(cleanedQuery),
+        fetchCharacter3v3(cleanedQuery),
+        fetchCharacterStatistics(cleanedQuery),
     ]).then(([media, twos, threes, statistics]) => ({
         media,
         twos,
         threes,
         statistics,
-    }));
+    })).catch(err => null)
 }
 
 export async function fetchCharacterAchievements(query: CharacterQuery) {
@@ -116,7 +123,13 @@ async function bnetFetch(path: string, region: string, namespace: string) {
     });
     console.debug(`GET request to ${url}`);
 
-    return fetch(url, { headers }).then((res) => (res.ok ? res.json() : null));
+    return fetch(url, { headers }).then((res) => {
+        if (!res.ok) {
+            throw new Error();
+        }
+
+        return res.json();
+    });
 }
 
 function constructUrl(path: string, region: string, namespace: string): string {

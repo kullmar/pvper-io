@@ -2,10 +2,17 @@ import Head from 'next/head';
 import { GetServerSideProps } from 'next';
 import CharacterSearch from '../components/character-search';
 import Navbar from '../components/navbar';
-import { fetchAllRealms, fetchCharacter } from '../lib/wow-api';
+import { CharacterQuery, fetchAllRealms, fetchCharacter } from '../lib/wow-api';
 import Character from '../components/character';
+import { useRouter } from 'next/router';
 
-export default function Home({ character, realms }) {
+export const previousSearches: Map<string, Set<CharacterQuery>> = new Map();
+
+export default function Home({ character, realms, recent }) {
+    const router = useRouter();
+
+    const showNotFound = router.asPath !== '/' && !character;
+
     return (
         <>
             <Head>
@@ -15,17 +22,25 @@ export default function Home({ character, realms }) {
 
             <Navbar></Navbar>
 
-            <div className="container mx-auto mt-40 flex flex-wrap space-x-2">
-                <div className="flex flex-col flex-1 flex-shrink-0 space-y-2">
+            <div className="container mx-auto mt-40 flex flex-wrap md:space-x-2s">
+                <div className="flex flex-col flex-1 flex-shrink-0 space-y-2 min-w-full md:min-w-0">
                     <CharacterSearch realms={realms} />
 
                     <div className="character-background bg-surface">
+                        {showNotFound && <h2>Not found</h2>}
                         <Character character={character} />
                     </div>
                 </div>
 
-                <div className="flex-1 flex-shrink-0 bg-surface">
+                <div className="flex-1 flex-shrink-0 flex-col bg-surface">
                     Recent searches
+                    {recent.length > 0 && (
+                        <ul>
+                            {recent.map((r) => (
+                                <li key={r}>{r}</li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </div>
 
@@ -49,6 +64,7 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
     let props = {
         props: {
             realms: await fetchAllRealms(),
+            recent: Array.from(previousSearches.keys()),
         },
     };
 
@@ -72,6 +88,17 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
                     arena: arenaStatistics,
                     media,
                 };
+            }
+
+            if (previousSearches.has(characterName)) {
+                previousSearches
+                    .get(characterName)
+                    .add({ characterName, realm, region });
+            } else {
+                previousSearches.set(
+                    characterName,
+                    new Set([{ characterName, realm, region }])
+                );
             }
         }
     }

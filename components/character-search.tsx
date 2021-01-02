@@ -1,14 +1,19 @@
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useOnClickOutside } from '../effects/click-outside';
 
 export default function CharacterSearch({ realms }) {
-    const initialAutocompleteRealms = realms.slice(0, 10);
+    const initialAutocompleteItems = realms.slice(0, 10);
     const [inputVal, setInputVal] = useState('');
     const [characterName, setCharacterName] = useState('');
     const [realm, setRealm] = useState('');
-    const [autocompleteRealms, setAutocompleteRealms] = useState(initialAutocompleteRealms);
+    const [autocompleteItems, setAutocompleteItems] = useState(initialAutocompleteItems);
+    const [isAutocompleteVisible, setAutocompleteVisible] = useState(false);
 
     const router = useRouter();
+    const ref = useRef();
+
+    useOnClickOutside(ref, () => setAutocompleteVisible(false));
 
     function handleInputChange(val: string) {
         setInputVal(val);
@@ -18,11 +23,13 @@ export default function CharacterSearch({ realms }) {
             const [cname, realmInput] = split;
             setCharacterName(cname);
             setRealm(realmInput);
-            setAutocompleteRealms(realms.filter(r => r.name.toLowerCase().startsWith(realmInput.toLowerCase())).slice(0, 10));
+            setAutocompleteItems(realms.filter(r => r.name.toLowerCase().startsWith(realmInput.toLowerCase())).slice(0, 10));
         } else {
-            setCharacterName(val);
-            setAutocompleteRealms(initialAutocompleteRealms);
+            setCharacterName(v);
+            setAutocompleteItems(initialAutocompleteItems);
         }
+
+        setAutocompleteVisible(v.length >= 2);
     }
 
     function handleButtonClick(e: React.MouseEvent) {
@@ -35,6 +42,7 @@ export default function CharacterSearch({ realms }) {
     function handleAutocompleteClick(item) {
         setInputVal(`${item.characterName}-${item.realm}`);
         setRealm(item.realm);
+        setAutocompleteVisible(false);
         router.push(`/${item.region}/${item.realm.toLowerCase()}/${item.characterName}`);
     }
 
@@ -51,10 +59,10 @@ export default function CharacterSearch({ realms }) {
                     className="w-full"
                 ></input>
 
-                {inputVal.length > 2 && 
+                {isAutocompleteVisible && 
                     (
-                        <ul className="absolute w-full border-2 bg-surface rounded">
-                            {autocompleteRealms.map((r, index) => (
+                        <ul className="absolute w-full border-2 bg-surface rounded" ref={ref}>
+                            {autocompleteItems.map((r, index) => (
                                 <li
                                     key={index}
                                     className="cursor-pointer hover:bg-gray-700"
