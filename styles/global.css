@@ -3,9 +3,16 @@
     --color-primary-light: #7986cb;
     --color-primary-dark: #303f9f;
     --color-secondary: #f50057;
-    --color-body: #121212;
-    --color-background: #333;
+    --color-body: #212121;
+    --color-background: 51, 51, 51;
+    --color-on-background: theme('colors.white');
     --color-text-primary: theme('colors.white');
+}
+
+.theme--light {
+    --color-body: #fafafa;
+    --color-on-background: theme('colors.white');
+    --color-text-primary: theme('colors.black');
 }
 
 @tailwind base;
@@ -24,5 +31,13 @@
 
     input {
         @apply bg-transparent rounded text-white border-2;
+    }
+}
+
+@layer utilities {  
+    .bg-surface {
+        --tw-bg-opacity: 1;
+        background-color: rgba(var(--color-background), var(--tw-bg-opacity));
+        color: var(--color-on-background);
     }
 }

@@ -25,6 +25,14 @@ export interface Realm {
     region: string;
 }
 
+export interface Character {
+    name: string;
+    realm: string;
+    region: string;
+    media: any;
+    arena: any;
+}
+
 let cachedRealms: Realm[];
 
 export async function fetchAllRealms(): Promise<Realm[]> {
@@ -50,7 +58,9 @@ export async function fetchAllRealms(): Promise<Realm[]> {
     return cachedRealms;
 }
 
-export async function fetchCharacter(query: CharacterQuery) {
+export async function fetchCharacter(
+    query: CharacterQuery
+): Promise<Character | null> {
     const cleanedQuery = {
         characterName: query.characterName,
         realm: query.realm.toLowerCase(),
@@ -61,12 +71,15 @@ export async function fetchCharacter(query: CharacterQuery) {
         fetchCharacter2v2(cleanedQuery),
         fetchCharacter3v3(cleanedQuery),
         fetchCharacterStatistics(cleanedQuery),
-    ]).then(([media, twos, threes, statistics]) => ({
-        media,
-        twos,
-        threes,
-        statistics,
-    })).catch(err => null)
+    ])
+        .then(([media, twos, threes, statistics]) => ({
+            name: media.character.name,
+            realm: media.character.realm.name,
+            region: cleanedQuery.region,
+            media: reduceMedia(media),
+            arena: reduceArenaStatistics({ twos, threes, statistics }),
+        }))
+        .catch((err) => null);
 }
 
 export async function fetchCharacterAchievements(query: CharacterQuery) {
@@ -145,4 +158,40 @@ function constructUrl(path: string, region: string, namespace: string): string {
 
 function getBaseUrlForRegion(region: string): string {
     return `https://${region}.api.blizzard.com`;
+}
+
+function reduceArenaStatistics(character) {
+    const arenaStatistics = character.statistics
+        .find((category: any) => category.name === 'Player vs. Player')
+        .sub_categories.find(
+            (category: any) => category.name === 'Rated Arenas'
+        ).statistics;
+
+    return {
+        twos: {
+            cr: character.twos.rating,
+            max: arenaStatistics.find(
+                (statistic) => statistic.name === 'Highest 2v2 personal rating'
+            ).quantity,
+            wins: character.twos.season_match_statistics.won,
+            losses: character.twos.season_match_statistics.lost,
+        },
+        threes: {
+            cr: character.threes.rating,
+            max: arenaStatistics.find(
+                (statistic) => statistic.name === 'Highest 3v3 personal rating'
+            ).quantity,
+            wins: character.threes.season_match_statistics.won,
+            losses: character.threes.season_match_statistics.lost,
+        },
+    };
+}
+
+function reduceMedia(media: any) {
+    const avatarImageUrl = media.assets.find((a) => a.key === 'avatar').value;
+    const characterImageUrl = media.assets.find((a) => a.key === 'main').value;
+    return {
+        avatarImageUrl,
+        characterImageUrl,
+    };
 }

@@ -1,17 +1,22 @@
 import CurrentRating from "./current-rating";
 
-export default function Character({character}) {
+export default function Character({ character }) {
     if (!character) {
         return null;
     }
 
     return (
             <div className="flex flex-col p-8 space-y-8">
-                <div>
+                <div className="flex space-x-4">
                     <img
                         className="w-24 h-24"
                         src={character.media.avatarImageUrl}
                     />
+                    
+                    <div className="flex flex-col">
+                        <h2>{character.name}</h2>
+                        <h3>{character.realm}</h3>
+                    </div>
                 </div>
 
                 <div className="flex justify-around">

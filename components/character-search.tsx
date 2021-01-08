@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useRef, useState } from 'react';
-import { useOnClickOutside } from '../effects/click-outside';
+import { useOnClickOutside } from '../hooks/click-outside';
 
 export default function CharacterSearch({ realms }) {
     const initialAutocompleteRealms = realms.slice(0, 10);
@@ -23,7 +23,7 @@ export default function CharacterSearch({ realms }) {
         if (split.length === 2) {
             const [cname, realmInput] = split;
             setCharacterName(cname);
-            setRealm(realmInput);
+            setRealm(realmInput.toLowerCase());
             setAutocompleteItems(realms.filter(r => r.name.toLowerCase().startsWith(realmInput.toLowerCase())).slice(0, 10));
         } else {
             setCharacterName(v);
@@ -44,7 +44,6 @@ export default function CharacterSearch({ realms }) {
         setInputVal(`${item.characterName}-${item.realm}`);
         setRealm(item.realm);
         setAutocompleteVisible(false);
-        router.push(`/${item.region}/${item.realm.toLowerCase()}/${item.characterName}`);
     }
 
     return (
@@ -63,19 +62,19 @@ export default function CharacterSearch({ realms }) {
                 {isAutocompleteVisible && 
                     (
                         <ul className="absolute w-full border-2 bg-surface rounded" ref={ref}>
-                            {autocompleteItems.map((r, index) => (
+                            {autocompleteItems.map((realm, index) => (
                                 <li
                                     key={index}
                                     className="cursor-pointer hover:bg-gray-700"
-                                    // onClick={() =>
-                                    //     handleAutocompleteClick({
-                                    //         characterName,
-                                    //         realm: r.name,
-                                    //         region: r.region,
-                                    //     })
-                                    // }
+                                    onClick={() =>
+                                        handleAutocompleteClick({
+                                            characterName,
+                                            realm: realm.name,
+                                            region: realm.region,
+                                        })
+                                    }
                                 >
-                                    <Link href={`/${r.region}/${r.name}/${characterName}`}><a>{characterName}-{r.name} ({r.region.toUpperCase()})</a></Link>
+                                    <Link href={`/${realm.region}/${encodeURIComponent(realm.name)}/${encodeURIComponent(characterName)}`}><a className="block">{characterName}-{realm.name} ({realm.region.toUpperCase()})</a></Link>
                                 </li>
                             ))}
                         </ul>
