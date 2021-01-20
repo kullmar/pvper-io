@@ -1,49 +1,107 @@
-import Link from 'next/link';
+import useSWR from 'swr'
 import { useRouter } from 'next/router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useOnClickOutside } from '../hooks/click-outside';
+import { Character, Realm } from '../lib/wow-api';
+import { Button } from './button';
+import { useDebounce } from '../hooks/debounce';
 
-export default function CharacterSearch({ realms }) {
-    const initialAutocompleteRealms = realms.slice(0, 10);
+type Props = {
+    realms: Realm[];
+    onSearchStarted?: (character: Character) => unknown;
+    onSearchCompleted?: () => unknown;
+};
+
+const fetcher = async (url) => {
+    const res = await fetch(url)
+    const data = await res.json()
+  
+    if (res.status !== 200) {
+      throw new Error(data.message)
+    }
+    return data
+  }
+
+export default function CharacterSearch({
+    realms,
+    onSearchStarted = null,
+    onSearchCompleted = null,
+}: Props) {
+    console.log('Render');
     const [inputVal, setInputVal] = useState('');
     const [characterName, setCharacterName] = useState('');
     const [realm, setRealm] = useState('');
-    const [autocompleteItems, setAutocompleteItems] = useState(initialAutocompleteRealms);
-    const [isAutocompleteVisible, setAutocompleteVisible] = useState(false);
+    const [region, setRegion] = useState('eu');
+    const [isAutocompleteVisible, setAutocompleteVisibility] = useState(false);
+    const debouncedInput = useDebounce(inputVal.trim(), 300);
+    console.log('Debounced input: ' + debouncedInput);
 
     const router = useRouter();
     const ref = useRef();
 
-    useOnClickOutside(ref, () => setAutocompleteVisible(false));
+    const handleRouteChangeComplete = () => {
+        if (onSearchCompleted) {
+            onSearchCompleted();
+        }
+    };
+    useEffect(() => {
+        router.events.off('routeChangeComplete', handleRouteChangeComplete);
+    });
+
+    useOnClickOutside(ref, () => setAutocompleteVisibility(false));
+
+    const { data: autocompleteItems } = useSWR(() => debouncedInput.length > 1 && `/api/character?searchTerm=${debouncedInput}`, fetcher);
 
     function handleInputChange(val: string) {
         setInputVal(val);
         const v = val.trim();
         const split = v.split('-');
         if (split.length === 2) {
-            const [cname, realmInput] = split;
-            setCharacterName(cname);
+            const [characterNameInput, realmInput] = split;
+            setCharacterName(characterNameInput);
             setRealm(realmInput.toLowerCase());
-            setAutocompleteItems(realms.filter(r => r.name.toLowerCase().startsWith(realmInput.toLowerCase())).slice(0, 10));
         } else {
             setCharacterName(v);
-            setAutocompleteItems(initialAutocompleteRealms);
         }
-
-        setAutocompleteVisible(v.length >= 2);
     }
 
     function handleButtonClick(e: React.MouseEvent) {
         e.preventDefault();
-        if (characterName && realm) {
-            router.push(`/eu/${realm}/${characterName}`);
-        }
+        goToCharacter({ name: characterName, realm, region });
     }
 
-    function handleAutocompleteClick(item) {
-        setInputVal(`${item.characterName}-${item.realm}`);
-        setRealm(item.realm);
-        setAutocompleteVisible(false);
+    function handleAutocompleteClick(
+        selectedRealm: string,
+        selectedRegion: string
+    ) {
+        setInputVal(`${characterName}-${selectedRealm}`);
+        setRealm(selectedRealm);
+        setRegion(selectedRegion);
+        setAutocompleteVisibility(false);
+        goToCharacter({
+            name: characterName,
+            realm: selectedRealm,
+            region: selectedRegion,
+        });
+    }
+
+    function goToCharacter(character: Character) {
+        if (character.name && character.realm && character.region) {
+            if (onSearchCompleted) {
+                router.events.on(
+                    'routeChangeComplete',
+                    handleRouteChangeComplete
+                );
+            }
+            router.push(
+                `/${character.region}/${encodeURIComponent(
+                    character.realm
+                )}/${encodeURIComponent(character.name)}`
+            );
+            if (onSearchStarted) {
+                onSearchStarted(character);
+            }
+        }
     }
 
     return (
@@ -59,30 +117,31 @@ export default function CharacterSearch({ realms }) {
                     className="w-full"
                 ></input>
 
-                {isAutocompleteVisible && 
-                    (
-                        <ul className="absolute w-full border-2 bg-surface rounded" ref={ref}>
-                            {autocompleteItems.map((realm, index) => (
-                                <li
-                                    key={index}
-                                    className="cursor-pointer hover:bg-gray-700"
-                                    onClick={() =>
-                                        handleAutocompleteClick({
-                                            characterName,
-                                            realm: realm.name,
-                                            region: realm.region,
-                                        })
-                                    }
-                                >
-                                    <Link href={`/${realm.region}/${encodeURIComponent(realm.name)}/${encodeURIComponent(characterName)}`}><a className="block">{characterName}-{realm.name} ({realm.region.toUpperCase()})</a></Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )
-                }
+                {isAutocompleteVisible && (
+                    <ul
+                        className="absolute w-full border-2 bg-surface rounded"
+                        ref={ref}
+                    >
+                        {autocompleteItems.map((realm, index) => (
+                            <li
+                                key={index}
+                                className="cursor-pointer hover:bg-gray-700"
+                                onClick={() =>
+                                    handleAutocompleteClick(
+                                        realm.name,
+                                        realm.region
+                                    )
+                                }
+                            >
+                                {characterName}-{realm.name} (
+                                {realm.region.toUpperCase()})
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
 
-            <button onClick={(e) => handleButtonClick(e)}>Search</button>
+            <Button onClick={(e) => handleButtonClick(e)}>Search</Button>
         </div>
     );
 }

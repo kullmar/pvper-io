@@ -2,16 +2,19 @@ import Head from 'next/head';
 import { GetServerSideProps } from 'next';
 import CharacterSearch from '../components/character-search';
 import Navbar from '../components/navbar';
-import { CharacterQuery, fetchAllRealms, fetchCharacter } from '../lib/wow-api';
+import { fetchAllRealms, fetchCharacter } from '../lib/wow-api';
 import Character from '../components/character';
 import { useRouter } from 'next/router';
-
-export const previousSearches: Map<string, Set<CharacterQuery>> = new Map();
+import { addRecentCheck, getRecentChecks } from '../lib/redis';
+import { useState } from 'react';
+import { LoadingSpinner } from '../components/loading-spinner';
 
 export default function Home({ character, realms, recent }) {
+    const [isLoading, setLoading] = useState(false);
+
     const router = useRouter();
 
-    const showNotFound = router.asPath !== '/' && !character;
+    const showNotFound = !isLoading && router.asPath !== '/' && !character;
 
     return (
         <>
@@ -23,11 +26,14 @@ export default function Home({ character, realms, recent }) {
             <Navbar></Navbar>
 
             <div className="container mx-auto mt-40 flex flex-wrap space-y-2 md:space-x-2 md:space-y-0">
-                <div className="flex flex-col flex-1 flex-shrink-0 space-y-2 min-w-full md:min-w-0">
-                    <CharacterSearch realms={realms} />
+                
 
-                    <div className="character-background bg-surface">
-                        {showNotFound && <h2>Not found</h2>}
+                <div className="flex flex-col flex-1 flex-shrink-0 space-y-2 min-w-full md:min-w-0">
+                    <CharacterSearch realms={realms} onSearchStarted={() => setLoading(true)} onSearchCompleted={() => setLoading(false)} />
+
+                    <div className="character-background bg-surface flex justify-center">
+                        {isLoading && <LoadingSpinner></LoadingSpinner>}
+                        {showNotFound && <h2 className="mt-8">Not found</h2>}
                         <Character character={character} />
                     </div>
                 </div>
@@ -64,7 +70,7 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
     let props = {
         props: {
             realms: await fetchAllRealms(),
-            recent: Array.from(previousSearches.keys()),
+            recent: await getRecentChecks(),
         },
     };
 
@@ -86,17 +92,7 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
 
             if (character) {
                 props.props['character'] = character;
-            }
-
-            if (previousSearches.has(characterName)) {
-                previousSearches
-                    .get(characterName)
-                    .add({ characterName, realm, region });
-            } else {
-                previousSearches.set(
-                    characterName,
-                    new Set([{ characterName, realm, region }])
-                );
+                addRecentCheck(character);
             }
         }
     }

@@ -29,8 +29,8 @@ export interface Character {
     name: string;
     realm: string;
     region: string;
-    media: any;
-    arena: any;
+    media?: any;
+    arena?: any;
 }
 
 let cachedRealms: Realm[];

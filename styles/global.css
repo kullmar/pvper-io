@@ -27,6 +27,8 @@
 
     button {
         @apply px-3 py-1 rounded bg-primary hover:bg-primary-light font-bold;
+        min-width: 64px;
+        
     }
 
     input {
