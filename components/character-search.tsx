@@ -1,40 +1,37 @@
-import useSWR from 'swr'
+import useSWR from 'swr';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnClickOutside } from '../hooks/click-outside';
-import { Character, Realm } from '../lib/wow-api';
+import { Character, CharacterID, Realm } from '../lib/wow-api';
 import { Button } from './button';
 import { useDebounce } from '../hooks/debounce';
 
 type Props = {
     realms: Realm[];
-    onSearchStarted?: (character: Character) => unknown;
+    defaultRegion?: string;
+    onSearchStarted?: (character: CharacterID) => unknown;
     onSearchCompleted?: () => unknown;
 };
 
 const fetcher = async (url) => {
-    const res = await fetch(url)
-    const data = await res.json()
-  
+    const res = await fetch(url);
+    const data = await res.json();
+
     if (res.status !== 200) {
-      throw new Error(data.message)
+        throw new Error(data.message);
     }
-    return data
-  }
+    return data;
+};
 
 export default function CharacterSearch({
     realms,
+    defaultRegion = 'eu',
     onSearchStarted = null,
     onSearchCompleted = null,
 }: Props) {
-    console.log('Render');
     const [inputVal, setInputVal] = useState('');
-    const [characterName, setCharacterName] = useState('');
-    const [realm, setRealm] = useState('');
-    const [region, setRegion] = useState('eu');
     const [isAutocompleteVisible, setAutocompleteVisibility] = useState(false);
     const debouncedInput = useDebounce(inputVal.trim(), 300);
-    console.log('Debounced input: ' + debouncedInput);
 
     const router = useRouter();
     const ref = useRef();
@@ -50,43 +47,50 @@ export default function CharacterSearch({
 
     useOnClickOutside(ref, () => setAutocompleteVisibility(false));
 
-    const { data: autocompleteItems } = useSWR(() => debouncedInput.length > 1 && `/api/character?searchTerm=${debouncedInput}`, fetcher);
+    const { data: autocompleteItems } = useSWR(
+        () =>
+            debouncedInput.length > 1 &&
+            `/api/character?searchTerm=${debouncedInput}`,
+        fetcher
+    );
 
     function handleInputChange(val: string) {
         setInputVal(val);
-        const v = val.trim();
-        const split = v.split('-');
-        if (split.length === 2) {
-            const [characterNameInput, realmInput] = split;
-            setCharacterName(characterNameInput);
-            setRealm(realmInput.toLowerCase());
-        } else {
-            setCharacterName(v);
-        }
     }
 
     function handleButtonClick(e: React.MouseEvent) {
         e.preventDefault();
-        goToCharacter({ name: characterName, realm, region });
+        let characterName;
+        let realmSlug;
+        const trimmedInput = inputVal.trim();
+        const split = trimmedInput.split('-');
+        if (split.length === 2) {
+            characterName = split[0];
+            const realmName = split[1];
+            realmSlug = realms.find(
+                (r) =>
+                    r.name.toLowerCase() === realmName.toLowerCase() &&
+                    r.region === defaultRegion
+            )?.slug;
+        }
+
+        if (characterName && realmSlug) {
+            goToCharacter({ characterName, realmSlug, region: defaultRegion });
+        }
     }
 
-    function handleAutocompleteClick(
-        selectedRealm: string,
-        selectedRegion: string
-    ) {
-        setInputVal(`${characterName}-${selectedRealm}`);
-        setRealm(selectedRealm);
-        setRegion(selectedRegion);
+    function handleAutocompleteClick(char: Character) {
+        setInputVal(`${char.name}-${char.realm.name}`);
         setAutocompleteVisibility(false);
         goToCharacter({
-            name: characterName,
-            realm: selectedRealm,
-            region: selectedRegion,
+            characterName: char.name,
+            realmSlug: char.realm.slug,
+            region: char.region,
         });
     }
 
-    function goToCharacter(character: Character) {
-        if (character.name && character.realm && character.region) {
+    function goToCharacter(character: CharacterID) {
+        if (character.characterName && character.realmSlug && character.region) {
             if (onSearchCompleted) {
                 router.events.on(
                     'routeChangeComplete',
@@ -94,9 +98,9 @@ export default function CharacterSearch({
                 );
             }
             router.push(
-                `/${character.region}/${encodeURIComponent(
-                    character.realm
-                )}/${encodeURIComponent(character.name)}`
+                `/${character.region}/${
+                    character.realmSlug
+                }/${encodeURIComponent(character.characterName)}`
             );
             if (onSearchStarted) {
                 onSearchStarted(character);
@@ -111,30 +115,27 @@ export default function CharacterSearch({
                 <input
                     value={inputVal}
                     onChange={(event) => handleInputChange(event.target.value)}
+                    onFocus={() => setAutocompleteVisibility(true)}
                     id="character-search"
                     name="character-search"
                     type="text"
                     className="w-full"
+                    placeholder="Imitation-Stormreaver"
                 ></input>
 
-                {isAutocompleteVisible && (
+                {isAutocompleteVisible && autocompleteItems && (
                     <ul
                         className="absolute w-full border-2 bg-surface rounded"
                         ref={ref}
                     >
-                        {autocompleteItems.map((realm, index) => (
+                        {autocompleteItems.map((char, index) => (
                             <li
                                 key={index}
                                 className="cursor-pointer hover:bg-gray-700"
-                                onClick={() =>
-                                    handleAutocompleteClick(
-                                        realm.name,
-                                        realm.region
-                                    )
-                                }
+                                onClick={() => handleAutocompleteClick(char)}
                             >
-                                {characterName}-{realm.name} (
-                                {realm.region.toUpperCase()})
+                                {char.name}-{char.realm} (
+                                {char.region.toUpperCase()})
                             </li>
                         ))}
                     </ul>

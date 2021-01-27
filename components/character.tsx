@@ -6,7 +6,7 @@ export default function Character({ character }) {
     }
 
     return (
-            <div className="flex flex-col p-8 space-y-8">
+            <div className="flex flex-col p-8 space-y-8 w-full">
                 <div className="flex space-x-4">
                     <img
                         className="w-24 h-24"
@@ -14,8 +14,7 @@ export default function Character({ character }) {
                     />
                     
                     <div className="flex flex-col">
-                        <h2>{character.name}</h2>
-                        <h3>{character.realm}</h3>
+                        <h2>{character.name}-{character.realm}</h2>
                     </div>
                 </div>
 

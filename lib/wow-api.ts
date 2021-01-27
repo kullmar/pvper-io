@@ -1,8 +1,8 @@
 import { getBnetAccessToken } from './bnet-oauth';
 
-export interface CharacterQuery {
+export interface CharacterID {
     characterName: string;
-    realm: string;
+    realmSlug: string;
     region: string;
 }
 
@@ -22,12 +22,13 @@ export interface StatisticsCategory {
 
 export interface Realm {
     name: string;
+    slug: string;
     region: string;
 }
 
 export interface Character {
     name: string;
-    realm: string;
+    realm: Realm;
     region: string;
     media?: any;
     arena?: any;
@@ -37,12 +38,12 @@ let cachedRealms: Realm[];
 
 export async function fetchAllRealms(): Promise<Realm[]> {
     if (cachedRealms) {
-        cachedRealms;
+        return cachedRealms;
     }
 
     const path = '/data/wow/realm/index';
-    const mapper = (realmData: any, region: string) => ({
-        name: realmData.name,
+    const mapper = (realmData: Realm, region: string) => ({
+        ...realmData,
         region,
     });
     cachedRealms = await Promise.all([
@@ -59,65 +60,87 @@ export async function fetchAllRealms(): Promise<Realm[]> {
 }
 
 export async function fetchCharacter(
-    query: CharacterQuery
+    query: CharacterID
 ): Promise<Character | null> {
-    const cleanedQuery = {
-        characterName: query.characterName,
-        realm: query.realm.toLowerCase(),
-        region: query.region.toLowerCase(),
-    };
     return Promise.all([
-        fetchCharacterMedia(cleanedQuery),
-        fetchCharacter2v2(cleanedQuery),
-        fetchCharacter3v3(cleanedQuery),
-        fetchCharacterStatistics(cleanedQuery),
+        fetchCharacterMedia(query),
+        fetchCharacter2v2(query),
+        fetchCharacter3v3(query),
+        fetchCharacterStatistics(query),
     ])
         .then(([media, twos, threes, statistics]) => ({
             name: media.character.name,
-            realm: media.character.realm.name,
-            region: cleanedQuery.region,
+            realm: media.character.realm,
+            region: query.region,
             media: reduceMedia(media),
             arena: reduceArenaStatistics({ twos, threes, statistics }),
         }))
-        .catch((err) => null);
+        .catch((err: Error) => {
+            console.error(`Failed to fetch character info`);
+            return null;
+        });
 }
 
-export async function fetchCharacterAchievements(query: CharacterQuery) {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/achievements`;
+export async function fetchCharacterAchievements(query: CharacterID) {
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/achievements`;
     return profileFetch(endpoint, region);
 }
 
 export async function fetchCharacterStatistics(
-    query: CharacterQuery
+    query: CharacterID
 ): Promise<StatisticsCategory[]> {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/achievements/statistics`;
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/achievements/statistics`;
     return profileFetch(endpoint, region).then((data) => data.categories);
 }
 
-export async function fetchCharacter2v2(query: CharacterQuery) {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/pvp-bracket/2v2`;
+export async function fetchCharacter2v2(query: CharacterID) {
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/pvp-bracket/2v2`;
     return profileFetch(endpoint, region);
 }
 
-export async function fetchCharacter3v3(query: CharacterQuery) {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/pvp-bracket/3v3`;
+export async function fetchCharacter3v3(query: CharacterID) {
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/pvp-bracket/3v3`;
     return profileFetch(endpoint, region);
 }
 
-export async function fetchCharacterPvpSummary(query: CharacterQuery) {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/pvp-summary`;
+export async function fetchCharacterPvpSummary(query: CharacterID) {
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/pvp-summary`;
     return profileFetch(endpoint, region);
 }
 
-export async function fetchCharacterMedia(query: CharacterQuery) {
-    const { region, realm, characterName } = query;
-    const endpoint = `/profile/wow/character/${realm}/${characterName}/character-media`;
+export async function fetchCharacterMedia(query: CharacterID) {
+    const { region, realmSlug, characterName } = query;
+    const endpoint = `${getCharacterEndpoint(
+        realmSlug,
+        characterName
+    )}/character-media`;
     return profileFetch(endpoint, region);
+}
+
+function getCharacterEndpoint(realm: string, characterName: string) {
+    return `/profile/wow/character/${encodeURIComponent(
+        realm
+    )}/${encodeURIComponent(characterName)}`;
 }
 
 async function dynamicFetch(path: string, region: string) {
